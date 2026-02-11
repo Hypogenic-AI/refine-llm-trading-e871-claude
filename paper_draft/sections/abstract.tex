@@ -1,0 +1,8 @@
+Large language model (LLM) trading agents overwhelmingly operate on daily buy/sell/hold decisions, yet consistently fail to outperform passive strategies such as Buy-and-Hold.
+We ask whether this failure stems partly from a mismatch between the daily decision horizon and the reasoning strengths of LLMs.
+We conduct the first controlled experiment isolating \emph{decision frequency} as the sole independent variable for an LLM trading agent: using the same \gptmini agent, prompt template, and data across daily, weekly, and monthly rebalancing on five major U.S.\ stocks over 2023--2024.
+We find a non-monotonic ``Goldilocks'' relationship: weekly rebalancing achieves the best risk-adjusted performance (Sharpe ratio 1.028), outperforming daily rebalancing (0.892) by 15\% and monthly rebalancing (0.421) by 144\%.
+Weekly rebalancing also delivers 16\% higher cumulative returns than daily while requiring 75\% fewer trades.
+Monthly rebalancing degrades performance sharply, with two of five stocks producing negative returns.
+Although no LLM frequency outperforms \buyhold (Sharpe 1.620) in this bull-market period---consistent with recent benchmarking studies---our results reveal that decision frequency is a key design variable for LLM trading agents.
+These findings suggest that LLMs have a temporal sweet spot for financial reasoning, where weekly horizons filter daily noise without losing important signals at coarser timescales.

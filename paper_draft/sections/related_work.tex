@@ -1,0 +1,38 @@
+\section{Related Work}
+\label{sec:related}
+
+\para{LLM trading agents.}
+The use of LLMs for financial trading has grown rapidly since GPT-3 \citep{brown2020gpt3} demonstrated strong in-context learning.
+\finmem \citep{yu2023finmem} introduces a layered memory architecture with decay mechanisms for trading individual stocks.
+\tradingagents \citep{xiao2024tradingagents} mimics institutional trading firms with specialized analyst, researcher, trader, and risk management agents.
+\fincon \citep{yu2024fincon} proposes a manager-analyst hierarchy with conceptual verbal reinforcement.
+\flagtrader \citep{xiong2025flagtrader} fuses LLM reasoning with reinforcement learning by using the LLM as a policy network fine-tuned via trading reward gradients.
+A common thread across these systems is the reliance on \emph{daily} decision cycles, where the agent makes a single buy/sell/hold decision each trading day.
+Our work departs from this convention by systematically varying the decision frequency.
+
+\para{Benchmarking LLM trading.}
+Several recent studies have rigorously evaluated LLM trading agents.
+\finsaber \citep{li2025finsaber}, accepted at KDD 2026, benchmarks LLM strategies over 20 years using 100+ S\&P 500 constituents (including delisted stocks) and finds that neither \finmem nor \finagent generates statistically significant alpha.
+\stockbench \citep{chen2025stockbench} reaches similar conclusions: ``excelling at static financial knowledge tasks does not necessarily translate into successful trading strategies.''
+\citet{fan2025aitrader} test across U.S.\ stocks, A-shares, and cryptocurrency, finding that ``general intelligence does not automatically translate to effective trading capability.''
+\citet{li2024investorbench} provide a standardized benchmark across stocks, crypto, and ETFs with 13 LLM backbones.
+These benchmarking studies consistently find that LLM agents underperform simple baselines at the daily frequency.
+Our work investigates whether \emph{changing} the decision frequency can narrow this performance gap.
+
+\para{Temporal horizons in LLM trading.}
+The most directly relevant work to ours is \finpos \citep{liu2025finpos}, which introduces position-aware trading with multi-timescale reward design.
+\finpos evaluates rewards across 1-day, 7-day, and 30-day horizons and finds that the 30-day horizon produces the best performance, dramatically outperforming single-step daily approaches.
+The authors argue that ``LLMs excel at extracting long-term trends and underlying causal structures from complex semantic information rather than performing high-frequency precise numerical optimization.''
+However, \finpos varies the \emph{reward} horizon within a multi-agent architecture that still makes daily decisions.
+Our work complements \finpos by varying the \emph{decision} frequency itself---the agent only acts at weekly or monthly intervals---providing a cleaner isolation of the temporal variable.
+
+\para{High-frequency LLM trading.}
+At the opposite end of the spectrum, \quantagent \citep{xiong2025quantagent} applies multi-agent LLMs to high-frequency trading on 1-hour and 4-hour bars, achieving up to 80\% directional accuracy.
+Notably, \quantagent operates solely on price-derived signals, explicitly avoiding textual data which ``typically lags price discovery.''
+\citet{darmanin2025lmrl} propose a hybrid framework where LLMs generate high-level strategies to guide RL agents for short-term execution, arguing that LLMs are best suited for longer-term strategic direction.
+These works suggest a natural division of labor: LLMs for strategic, longer-horizon reasoning, and specialized models or rules for tactical execution.
+
+\para{Surveys.}
+\citet{ding2024llmagent} survey 51 LLM trading agent papers, providing a taxonomy of approaches including news-driven, reflection-driven, debate-driven, and RL-driven agents.
+\citet{nie2024survey} cover financial LLM applications broadly, spanning sentiment analysis, time series forecasting, and agent-based trading.
+Both surveys note the predominance of daily trading cycles and the difficulty of outperforming passive baselines---precisely the challenge our work addresses through the lens of decision frequency.

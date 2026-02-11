@@ -1,0 +1,21 @@
+# ── Large data files (download via scripts in code/) ──
+# Stock price CSVs (regenerate with: python code/download_stock_data.py)
+stock_prices/*.csv
+
+# FNSPID dataset (large; see README.md for download instructions)
+fnspid/
+
+# SEC EDGAR filings
+sec_filings/
+
+# Financial news dumps
+news/
+
+# Temporary / intermediate files
+*.parquet
+*.pkl
+*.h5
+*.feather
+*.arrow
+*.zip
+*.tar.gz

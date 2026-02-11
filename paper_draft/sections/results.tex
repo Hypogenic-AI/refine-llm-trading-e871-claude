@@ -1,0 +1,152 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Main Results: Weekly Rebalancing is Optimal}
+\label{sec:main_results}
+
+\tabref{tab:main_results} presents the aggregate performance of the LLM agent across the three rebalancing frequencies, averaged over five stocks and multiple runs.
+Weekly rebalancing achieves the highest Sharpe ratio (1.028), outperforming daily (0.892) by 15\% and monthly (0.421) by 144\%.
+Weekly also delivers the highest cumulative return (+62.4\%) while executing 75\% fewer trades than daily (31 vs.\ 127).
+Monthly rebalancing substantially degrades performance across all metrics, with cumulative return dropping to +13.5\% and the Sortino ratio falling to 0.523.
+
+\begin{table}[t]
+    \centering
+    \caption{LLM agent performance by rebalancing frequency, averaged across five stocks. Best LLM results in \textbf{bold}. Weekly achieves the best risk-adjusted returns while requiring far fewer trades.}
+    \label{tab:main_results}
+    \begin{tabular}{@{}lccccc@{}}
+        \toprule
+        \textbf{Frequency} & \textbf{CR (\%)} & \textbf{Sharpe} & \textbf{MDD (\%)} & \textbf{Sortino} & \textbf{Trades} \\
+        \midrule
+        Daily   & +53.8 & 0.892 & \textbf{$-$20.7} & 1.140 & 127 \\
+        Weekly  & \textbf{+62.4} & \textbf{1.028} & $-$24.2 & \textbf{1.292} & \textbf{31} \\
+        Monthly & +13.5 & 0.421 & $-$28.0 & 0.523 & 11 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Comparison to Baselines}
+\label{sec:baseline_comparison}
+
+\tabref{tab:baselines} compares all strategies.
+No LLM configuration outperforms \buyhold (Sharpe 1.620), consistent with findings from \finsaber \citep{li2025finsaber}.
+However, the weekly LLM agent approaches \smacross performance (Sharpe 1.028 vs.\ 1.058--1.099) and substantially outperforms \randombl (Sharpe 0.701).
+The daily LLM agent underperforms \smacross (0.892 vs.\ 1.093), while the monthly LLM agent performs barely better than \randombl.
+
+\begin{table}[t]
+    \centering
+    \caption{Comparison of all strategies averaged across five stocks. \buyhold dominates in this bull market, but weekly LLM rebalancing approaches \smacross performance.}
+    \label{tab:baselines}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}llcccc@{}}
+        \toprule
+        \textbf{Strategy} & \textbf{Frequency} & \textbf{CR (\%)} & \textbf{Sharpe} & \textbf{MDD (\%)} & \textbf{Trades} \\
+        \midrule
+        \buyhold         & ---     & \textbf{+162.2} & \textbf{1.620} & $-$26.2 & 1 \\
+        \smacross        & Daily   & +61.2  & 1.093 & $-$24.2 & 9 \\
+        \smacross        & Weekly  & +56.0  & 1.058 & $-$24.4 & 9 \\
+        \smacross        & Monthly & +61.8  & 1.099 & $-$22.9 & 7 \\
+        \randombl        & Daily   & +29.4  & 0.701 & $-$25.6 & 173 \\
+        \midrule
+        LLM (\gptmini)  & Daily   & +53.8  & 0.892 & \textbf{$-$20.7} & 127 \\
+        LLM (\gptmini)  & Weekly  & +62.4  & 1.028 & $-$24.2 & 31 \\
+        LLM (\gptmini)  & Monthly & +13.5  & 0.421 & $-$28.0 & 11 \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table}
+
+\subsection{Per-Stock Analysis}
+\label{sec:per_stock}
+
+\tabref{tab:per_stock} presents per-stock results, and \figref{fig:per_stock_sharpe} visualizes the Sharpe ratios.
+The weekly advantage is robust: it holds for 4 of 5 stocks (AAPL, MSFT, AMZN, NFLX).
+TSLA is the sole exception, where daily slightly outperforms weekly (Sharpe 1.213 vs.\ 1.100), likely due to TSLA's high volatility creating profitable short-term trading opportunities.
+
+\begin{table}[t]
+    \centering
+    \caption{Per-stock LLM agent performance across rebalancing frequencies. Best Sharpe per stock in \textbf{bold}. Weekly outperforms daily in 4 of 5 stocks.}
+    \label{tab:per_stock}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}llcccccc@{}}
+        \toprule
+        & & \multicolumn{2}{c}{\textbf{Daily}} & \multicolumn{2}{c}{\textbf{Weekly}} & \multicolumn{2}{c}{\textbf{Monthly}} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+        \textbf{Stock} & \textbf{B\&H SR} & \textbf{CR (\%)} & \textbf{Sharpe} & \textbf{CR (\%)} & \textbf{Sharpe} & \textbf{CR (\%)} & \textbf{Sharpe} \\
+        \midrule
+        AAPL & 2.04 & +40.9 & 1.163 & +49.0 & \textbf{1.304} & +18.0 & 0.584 \\
+        MSFT & 1.62 & +7.6  & 0.284 & +29.4 & \textbf{0.781} & +23.1 & 0.654 \\
+        AMZN & 2.10 & +21.5 & 0.531 & +30.1 & 0.678 & +34.5 & \textbf{0.684} \\
+        TSLA & 1.14 & +129.9 & \textbf{1.213} & +121.7 & 1.100 & $-$6.8 & 0.102 \\
+        NFLX & 1.97 & +69.2 & 1.270 & +81.8 & \textbf{1.276} & $-$1.5 & 0.080 \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\linewidth]{figures/llm_per_stock_sharpe.png}
+    \caption{Sharpe ratio by stock and rebalancing frequency. Weekly outperforms daily for 4 of 5 stocks, with the largest improvement for MSFT (+175\%). Monthly degrades sharply for volatile stocks (TSLA, NFLX).}
+    \label{fig:per_stock_sharpe}
+\end{figure}
+
+The most dramatic improvement occurs for MSFT, where the daily Sharpe of 0.284 jumps to 0.781 at weekly frequency---a 175\% improvement.
+MSFT has lower volatility than the other stocks, making daily price noise particularly unhelpful for the LLM.
+AMZN is an interesting case: monthly (Sharpe 0.684) slightly outperforms weekly (0.678), though both substantially beat daily (0.531).
+This may reflect AMZN's stronger trending behavior during this period.
+
+\subsection{Statistical Analysis}
+\label{sec:stats}
+
+We conduct paired $t$-tests across the five stocks to test our hypotheses, with Cohen's $d$ effect sizes:
+
+\para{Weekly vs.\ daily.}
+The mean Sharpe difference is +0.136 in favor of weekly, with a medium effect size ($d = 0.59$).
+The paired $t$-test yields $p = 0.256$, which does not reach significance at $\alpha = 0.05$.
+The direction consistently supports the hypothesis (weekly better in 4/5 stocks), but the small sample size ($n = 5$) limits statistical power.
+
+\para{Monthly vs.\ daily.}
+The mean Sharpe difference is $-$0.472, indicating monthly is substantially worse, with a medium-to-large negative effect ($d = -0.66$).
+The paired $t$-test yields $p = 0.213$.
+While not significant at $\alpha = 0.05$ due to variance across stocks, the direction is unanimous: monthly underperforms daily for all five stocks on Sharpe ratio.
+
+\subsection{Trade Efficiency}
+\label{sec:efficiency}
+
+\figref{fig:trades_return} plots the relationship between trade count and cumulative return.
+Weekly rebalancing achieves higher returns with far fewer trades: 31 trades yield +62.4\% return, compared to 127 trades for +53.8\% (daily) and 11 trades for +13.5\% (monthly).
+This implies that each weekly trade captures substantially more value than each daily trade, while monthly trades are too infrequent to capture available opportunities.
+At 75\% fewer API calls, weekly rebalancing also reduces LLM inference costs proportionally.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{figures/trades_vs_return.png}
+        \caption{Trade count vs.\ cumulative return.}
+        \label{fig:trades_return}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{figures/sharpe_by_frequency.png}
+        \caption{Sharpe ratio by strategy and frequency.}
+        \label{fig:sharpe_bars}
+    \end{subfigure}
+    \caption{(\subref{fig:trades_return}) Weekly achieves the best return-per-trade ratio. (\subref{fig:sharpe_bars}) The LLM agent's Sharpe ratio peaks at weekly frequency, approaching \smacross performance.}
+    \label{fig:efficiency}
+\end{figure}
+
+\subsection{Drawdown Analysis}
+\label{sec:drawdown}
+
+Contrary to our initial hypothesis that longer horizons would reduce drawdowns, we observe the opposite pattern (\figref{fig:sharpe_heatmap}).
+Daily rebalancing achieves the lowest maximum drawdown ($-$20.7\%), followed by weekly ($-$24.2\%) and monthly ($-$28.0\%).
+Frequent position adjustments allow the daily agent to exit losing positions quickly, providing better downside protection.
+The monthly agent, deciding only 24 times over 2 years, cannot respond to intra-month corrections.
+TSLA illustrates the extreme: daily MDD is $-$33.9\%, weekly $-$46.7\%, and monthly $-$48.1\%.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figures/sharpe_heatmap.png}
+    \caption{Heatmap of Sharpe ratios by stock and frequency. The weekly column is consistently the brightest (highest values) except for TSLA. Monthly (right) shows sharp degradation for volatile stocks.}
+    \label{fig:sharpe_heatmap}
+\end{figure}

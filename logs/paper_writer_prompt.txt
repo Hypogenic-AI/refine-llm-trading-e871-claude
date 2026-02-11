@@ -1,0 +1,936 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at templates/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. USE COMMAND TEMPLATES: Copy templates/paper_writing/commands/ to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Do LLM Trading Agents Perform Better at Longer Decision Horizons?
+
+## 1. Executive Summary
+
+We tested whether LLM trading agents achieve better performance when making longer-term (weekly/monthly) trading decisions compared to the standard daily approach. Using GPT-4.1-mini as the trading agent across 5 major stocks (AAPL, MSFT, AMZN, TSLA, NFLX) over a 2-year period (2023-2024), we found that **weekly rebalancing yields the best LLM performance** (Sharpe ratio 1.028 vs. 0.892 for daily), while **monthly rebalancing significantly degrades performance** (Sharpe 0.421). However, none of the LLM strategies outperform simple Buy-and-Hold (Sharpe 1.620) in this bull-market period, consistent with prior findings from FINSABER (KDD 2026).
+
+**Key finding**: There is a &#34;Goldilocks zone&#34; for LLM trading decisions — weekly rebalancing outperforms both daily and monthly, suggesting LLMs benefit from filtering daily noise but lose important signal at monthly horizons.
+
+## 2. Goal
+
+### Hypothesis
+Large language model agents may perform better in financial trading when making longer-term trading decisions, as opposed to optimizing for short-term, day-to-day profit.
+
+### Why This Matters
+Current LLM trading agents overwhelmingly operate on daily buy/sell/hold decisions (FinMem, FinAgent, TradingAgents), yet multiple benchmarking studies (FINSABER, StockBench) show these agents consistently fail to outperform passive strategies. If the decision horizon is a key variable, the entire field should reconsider how it builds financial AI agents. FinPos (2025) hinted that multi-timescale rewards improve performance, but no prior work has systematically isolated the effect of rebalancing frequency.
+
+### Research Gap
+No existing work directly compares LLM agent performance across multiple trading horizons (daily, weekly, monthly) using the same architecture and data. This is the first controlled experiment isolating decision frequency as the independent variable.
+
+## 3. Data Construction
+
+### Dataset Description
+- **Source**: Yahoo Finance daily OHLCV data (pre-downloaded)
+- **Tickers**: AAPL, MSFT, AMZN, TSLA, NFLX
+- **Test Period**: January 2, 2023 – December 31, 2024 (502 trading days)
+- **Data fields**: Date, Open, High, Low, Close, Volume, Dividends, Stock Splits
+
+### Example Samples
+
+| Date       | Ticker | Close Price |
+|------------|--------|-------------|
+| 2023-01-03 | AAPL   | $123.10     |
+| 2023-06-30 | TSLA   | $261.77     |
+| 2024-12-31 | NFLX   | $89.13      |
+
+### Data Quality
+- **Missing values**: 0% — all trading days present
+- **Outliers**: Normal market volatility; no data errors detected
+- **Splits**: All prices are split-adjusted via Yahoo Finance
+- **Coverage**: 502 trading days per ticker for the test period
+
+### Preprocessing Steps
+1. Loaded CSV files with Date as index, parsed as datetime
+2. Filtered to test period (2023-01-01 to 2024-12-31)
+3. Used Close prices for all trading signals and portfolio valuation
+4. Computed rolling technical indicators (5-day SMA, 20-day SMA) within the agent
+
+### Test Period Characteristics
+This period was predominantly bullish, with all 5 stocks showing positive returns:
+| Ticker | Start Price | End Price | Buy-and-Hold Return |
+|--------|-------------|-----------|---------------------|
+| AAPL   | $123.10     | $249.06   | +102.1%             |
+| MSFT   | $233.99     | $418.41   | +78.6%              |
+| AMZN   | $85.82      | $219.39   | +155.4%             |
+| TSLA   | $108.10     | $403.84   | +273.2%             |
+| NFLX   | $29.50      | $89.13    | +201.9%             |
+
+## 4. Experiment Description
+
+### Methodology
+
+#### High-Level Approach
+We built a single LLM trading agent with configurable rebalancing frequency (daily, weekly, monthly). The agent receives recent price data and technical indicators, then makes a BUY/SELL/HOLD decision via the GPT-4.1-mini API. We hold the agent architecture, prompt template, and data sources constant across all frequencies, isolating decision frequency as the sole independent variable.
+
+#### Why This Method?
+- **Controlled comparison**: Same model, same prompt structure, same data — only frequency varies
+- **Real LLM**: Actual API calls to GPT-4.1-mini (not simulated behavior)
+- **Standard baselines**: Buy-and-Hold, SMA Crossover, Random for reference
+- **Multiple runs**: 2-3 runs per configuration to estimate variance
+
+### Implementation Details
+
+#### Tools and Libraries
+| Library    | Version | Purpose           |
+|------------|---------|-------------------|
+| Python     | 3.12.8  | Runtime           |
+| openai     | 2.20.0  | GPT-4.1-mini API  |
+| pandas     | 2.3.3   | Data manipulation |
+| numpy      | 2.2.6   | Numerical ops     |
+| scipy      | 1.17.0  | Statistical tests |
+| matplotlib | 3.10.8  | Visualization     |
+| seaborn    | 0.13.2  | Statistical plots |
+
+#### LLM Agent Design
+The LLM agent receives the following context at each decision point:
+- Current date and stock ticker
+- Current price and position status (cash or long)
+- Last 10 closing prices
+- 5-day and 20-day simple moving averages
+- Price changes over 1-day, 5-day, 10-day, and 20-day periods
+- The decision horizon (next day / next week / next month)
+
+The prompt explicitly instructs the model to consider the appropriate time horizon for its decision. The model responds with exactly one word: BUY, SELL, or HOLD.
+
+#### Hyperparameters
+| Parameter           | Value      | Selection Method     |
+|---------------------|------------|----------------------|
+| LLM Model           | gpt-4.1-mini | Cost-effective SOTA |
+| Temperature          | 0.3        | Low variance, per literature |
+| Max tokens           | 5          | Single-word response |
+| Initial capital      | $10,000    | Standard             |
+| Transaction cost     | 0.1%       | Conservative estimate |
+| Lookback window      | 60 days    | Standard technical   |
+| Daily runs           | 2          | Lower variance naturally |
+| Weekly/Monthly runs  | 3          | Higher variance needs more runs |
+
+#### Rebalancing Frequencies
+- **Daily**: Decision at every trading day (502 decision points)
+- **Weekly**: Decision every 5 trading days (100 decision points)
+- **Monthly**: Decision every 21 trading days (24 decision points)
+
+### Experimental Protocol
+
+#### Reproducibility Information
+- **Number of runs**: 2 per daily config, 3 per weekly/monthly config
+- **Random seeds**: 42, 49, 56 (offset by 7)
+- **Hardware**: CPU-only for API calls (no GPU needed)
+- **Total API calls**: ~9,375
+- **Total cost**: ~$0.82
+- **Total runtime**: 43.5 minutes
+- **API model version**: gpt-4.1-mini-2025-04-14
+
+#### Evaluation Metrics
+| Metric | Description | Why Used |
+|--------|-------------|----------|
+| Cumulative Return (CR%) | Total return over 2 years | Primary performance measure |
+| Sharpe Ratio (SR) | Annualized risk-adjusted return | Primary hypothesis test metric |
+| Maximum Drawdown (MDD%) | Worst peak-to-trough decline | Risk assessment |
+| Sortino Ratio | Downside risk-adjusted return | Asymmetric risk measure |
+| Number of Trades | Total buy/sell actions | Cost/activity measure |
+| Win Rate | % of positive return periods | Decision quality |
+
+### Raw Results
+
+#### LLM Agent Results by Frequency (Averaged Across Tickers)
+
+| Frequency | CR (%) | Sharpe Ratio | MDD (%) | Sortino | Trades |
+|-----------|--------|-------------|---------|---------|--------|
+| **Daily**   | +53.8  | 0.892       | -20.7   | 1.140   | 127    |
+| **Weekly**  | +62.4  | 1.028       | -24.2   | 1.292   | 31     |
+| **Monthly** | +13.5  | 0.421       | -28.0   | 0.523   | 11     |
+
+#### Per-Stock LLM Results
+
+| Ticker | Freq | CR (%) | Sharpe | MDD (%) | Trades |
+|--------|------|--------|--------|---------|--------|
+| AAPL | daily | +40.9 | 1.163 | -12.8 | 111 |
+| AAPL | weekly | +49.0 | 1.304 | -18.4 | 28 |
+| AAPL | monthly | +18.0 | 0.584 | -19.2 | 12 |
+| MSFT | daily | +7.6 | 0.284 | -12.5 | 123 |
+| MSFT | weekly | +29.4 | 0.781 | -18.9 | 31 |
+| MSFT | monthly | +23.1 | 0.654 | -17.8 | 9 |
+| AMZN | daily | +21.5 | 0.531 | -26.4 | 143 |
+| AMZN | weekly | +30.1 | 0.678 | -18.7 | 33 |
+| AMZN | monthly | +34.5 | 0.684 | -22.2 | 7 |
+| TSLA | daily | +129.9 | 1.213 | -33.9 | 139 |
+| TSLA | weekly | +121.7 | 1.100 | -46.7 | 37 |
+| TSLA | monthly | -6.8 | 0.102 | -48.1 | 14 |
+| NFLX | daily | +69.2 | 1.270 | -17.6 | 117 |
+| NFLX | weekly | +81.8 | 1.276 | -18.2 | 26 |
+| NFLX | monthly | -1.5 | 0.080 | -32.6 | 12 |
+
+#### Baseline Comparison (Averaged Across Tickers)
+
+| Strategy | Freq | CR (%) | Sharpe | MDD (%) | Trades |
+|----------|------|--------|--------|---------|--------|
+| Buy-and-Hold | all | +162.2 | 1.620 | -26.2 | 1 |
+| SMA-Crossover | daily | +61.2 | 1.093 | -24.2 | 9 |
+| SMA-Crossover | weekly | +56.0 | 1.058 | -24.4 | 9 |
+| SMA-Crossover | monthly | +61.8 | 1.099 | -22.9 | 7 |
+| Random | daily | +29.4 | 0.701 | -25.6 | 173 |
+| LLM-gpt-4.1-mini | daily | +53.8 | 0.892 | -20.7 | 127 |
+| LLM-gpt-4.1-mini | weekly | +62.4 | 1.028 | -24.2 | 31 |
+| LLM-gpt-4.1-mini | monthly | +13.5 | 0.421 | -28.0 | 11 |
+
+## 5. Result Analysis
+
+### Key Findings
+
+**Finding 1: Weekly rebalancing is the optimal LLM decision frequency.**
+The LLM agent at weekly frequency achieves a Sharpe ratio of 1.028, compared to 0.892 at daily and 0.421 at monthly. This 15% Sharpe improvement over daily holds for 4 out of 5 stocks (all except TSLA).
+
+**Finding 2: Monthly rebalancing dramatically degrades LLM performance.**
+At monthly frequency, the LLM agent&#39;s average cumulative return drops to +13.5% (vs. +53.8% daily, +62.4% weekly). Two stocks (TSLA at -6.8%, NFLX at -1.5%) show negative returns. The agent makes too few decisions to adapt to regime changes.
+
+**Finding 3: No LLM frequency beats Buy-and-Hold in this bull market.**
+Buy-and-Hold achieves a Sharpe of 1.620 averaged across tickers — substantially higher than the best LLM configuration (weekly: 1.028). This is consistent with FINSABER (2025), which found LLM agents fail to generate alpha over Buy-and-Hold in extended testing.
+
+**Finding 4: The LLM daily strategy has the lowest drawdowns.**
+Despite lower returns, the daily LLM agent achieves the best maximum drawdown (-20.7%) across all active strategies, suggesting it is effective at risk management through frequent position adjustments.
+
+**Finding 5: Weekly rebalancing achieves better returns with 75% fewer trades.**
+Weekly LLM makes ~31 trades vs. ~127 for daily, while achieving +16% higher cumulative return. This implies significant transaction cost savings and better signal-to-noise ratio.
+
+### Hypothesis Testing Results
+
+#### H1: Weekly &gt; Daily Sharpe Ratio
+- Mean difference: +0.136 (weekly higher)
+- Cohen&#39;s d: 0.59 (medium effect)
+- Paired t-test: p = 0.256 (not significant at α = 0.05)
+- Direction: **Supports hypothesis** (weekly better), but not statistically significant with n=5
+
+#### H2: Monthly &gt; Daily Sharpe Ratio
+- Mean difference: -0.472 (monthly lower)
+- Cohen&#39;s d: -0.66 (medium-large negative effect)
+- Paired t-test: p = 0.213
+- Direction: **Contradicts hypothesis** — monthly is substantially worse than daily
+
+#### H3: Longer horizons help more in bear markets
+- Limited data: Test period was predominantly bullish
+- Cannot conclusively test this hypothesis
+
+#### H4: Longer horizons have lower drawdowns
+- Daily MDD: -20.7% (best)
+- Weekly MDD: -24.2%
+- Monthly MDD: -28.0% (worst)
+- Direction: **Contradicts hypothesis** — shorter horizons had better drawdown control
+
+### Comparison to Baselines
+- LLM weekly (SR=1.028) approaches SMA Crossover (SR=1.058-1.099) but does not clearly beat it
+- LLM daily (SR=0.892) underperforms SMA Crossover (SR=1.093)
+- All active strategies significantly underperform Buy-and-Hold (SR=1.620) in this bull market
+- LLM at all frequencies outperforms Random (SR=0.701-1.001)
+
+### Visualizations
+
+Plots saved in `figures/` directory:
+- `sharpe_by_frequency.png` — Bar chart comparing Sharpe across strategies and frequencies
+- `cumulative_return_by_frequency.png` — Cumulative return comparison
+- `llm_per_stock_sharpe.png` — Per-stock LLM Sharpe by frequency
+- `sharpe_heatmap.png` — Heatmap of Sharpe ratios by stock × frequency
+- `sharpe_gap_vs_bh.png` — Gap between LLM and Buy-and-Hold by frequency
+- `drawdown_by_frequency.png` — Max drawdown comparison
+- `trades_vs_return.png` — Trade count vs return scatter
+- `portfolio_AAPL.png`, `portfolio_AMZN.png`, `portfolio_MSFT.png` — Portfolio value time series
+
+### Surprises and Insights
+
+1. **The non-monotonic relationship was unexpected.** We hypothesized &#34;longer = better&#34; but found a clear peak at weekly. This suggests LLMs have a specific temporal resolution where their reasoning is most effective.
+
+2. **Monthly TSLA and NFLX lost money.** At monthly frequency, the LLM made only 12-15 trades over 2 years and frequently held cash during rallies or stayed long during corrections. The 21-trading-day gap between decisions is too coarse for volatile stocks.
+
+3. **MSFT showed the most dramatic weekly improvement.** Daily MSFT Sharpe was only 0.284 (near zero), but weekly jumped to 0.781 — a 175% improvement. MSFT&#39;s price action has lower volatility, making daily noise particularly unhelpful.
+
+4. **Monthly results had near-zero variance across runs.** With only 24 decision points over 2 years, the LLM&#39;s temperature=0.3 produced nearly identical decisions across seeds. This means monthly results are deterministic, not stochastic.
+
+### Error Analysis
+
+Common failure modes at each frequency:
+- **Daily**: Excessive trading (111-144 trades) leads to death by transaction costs and whipsawing. The agent frequently alternates BUY/SELL based on 1-day price fluctuations.
+- **Weekly**: More stable decisions. Main failures occur during sharp intraday drops that happen between decision points (e.g., TSLA&#39;s 46.7% drawdown).
+- **Monthly**: Agent misses multi-week rallies and corrections entirely. By the time it acts, the opportunity has passed.
+
+### Limitations
+
+1. **Bull market bias**: 2023-2024 was strongly bullish for all 5 stocks. Results may differ dramatically in bear or sideways markets. The test should be extended to include 2022 (bear) and 2020 (crash+recovery).
+
+2. **Small sample size (n=5 stocks)**: With only 5 tickers, statistical tests lack power. The medium effect sizes (d=0.59, d=-0.66) would likely reach significance with n=15-20 stocks.
+
+3. **Single model**: Only GPT-4.1-mini was tested. Different models (GPT-4.1, Claude, Gemini) may show different horizon sensitivities.
+
+4. **Price-only signals**: The agent only receives price data and simple technical indicators. Adding news, fundamentals, or earnings data could change the horizon effects.
+
+5. **No position sizing**: The agent goes fully long or fully cash. Partial positions and portfolio allocation could improve all strategies.
+
+6. **No short selling**: The agent can only buy or hold cash. In bear markets, short-selling capability would be important.
+
+7. **Survivorship bias**: All 5 stocks are large-cap winners. Including delisted or declining stocks (per FINSABER methodology) would provide more robust results.
+
+## 6. Conclusions
+
+### Summary
+Weekly rebalancing provides the best performance for LLM trading agents, achieving a 15% higher Sharpe ratio (1.028 vs. 0.892) and 16% higher cumulative return (+62.4% vs. +53.8%) compared to daily rebalancing, while using 75% fewer trades. However, monthly rebalancing degrades performance dramatically (Sharpe 0.421), and no LLM frequency beats Buy-and-Hold (Sharpe 1.620) during this bull market period.
+
+**The answer to the research question is nuanced**: LLMs do perform better at *moderately* longer horizons (weekly &gt; daily), but not at *much* longer horizons (monthly &lt; daily). The relationship between decision horizon and performance is non-monotonic, with an apparent optimum around the weekly (5-day) timescale.
+
+### Implications
+
+**Practical implications:**
+- Researchers building LLM trading agents should default to weekly, not daily, rebalancing
+- Weekly frequency reduces API costs by ~80% while improving returns
+- Monthly is too infrequent for volatile individual stocks — it may work better for stable portfolios or indices
+
+**Theoretical implications:**
+- LLMs appear to have a &#34;temporal sweet spot&#34; for financial reasoning — daily is too noisy, monthly too coarse
+- This aligns with FinPos (2025) finding that 30-day reward horizons are optimal, and FINSABER&#39;s finding that LLMs are &#34;too conservative in bull markets&#34; (daily frequency exacerbates this)
+- The result supports the hypothesis that LLMs excel at semantic pattern recognition over multi-day horizons rather than precise daily numerical prediction
+
+### Confidence in Findings
+- **Medium-high confidence** in the weekly &gt; daily finding (4/5 stocks, medium effect size, consistent direction)
+- **High confidence** in the monthly &lt; daily finding (large effect, 5/5 stocks show degradation)
+- **Low confidence** in generalizability due to bull-market-only test period and small stock universe
+
+## 7. Next Steps
+
+### Immediate Follow-ups
+1. **Extend test period**: Include 2020-2022 to capture COVID crash, bear market, and recovery — this is the most important follow-up
+2. **Expand stock universe**: Test on 20-50 stocks including small-caps and declining stocks to improve statistical power
+3. **Add bi-weekly frequency**: Test 10-trading-day rebalancing to find the exact optimum between weekly and monthly
+4. **Test with news data**: Add financial news context to the LLM prompt to see if information-rich prompts change the optimal horizon
+
+### Alternative Approaches
+- **Multi-model comparison**: Test GPT-4.1, Claude Sonnet 4.5, and Gemini 2.5 Pro to see if the weekly advantage is model-specific
+- **Hybrid approach**: Use LLM for weekly strategic direction + rule-based daily execution (per Darmanin &amp; Vella 2025)
+- **Position-aware agent**: Implement FinPos-style position management with the weekly LLM agent
+- **Portfolio-level decisions**: Test whether monthly rebalancing works better for multi-asset allocation (less volatile than single-stock)
+
+### Open Questions
+1. Is the weekly optimum an artifact of the 5-day trading week structure, or a genuine cognitive property of LLMs?
+2. Would fine-tuned LLMs (FLAG-Trader style) show a different optimal horizon than API-based models?
+3. Does the optimal horizon shift with market volatility (shorter in calm markets, longer in volatile ones)?
+4. How does adding fundamental data (earnings, filings) interact with decision frequency?
+
+## References
+
+### Papers Directly Informing This Study
+1. Li et al. (2025) &#34;FINSABER: Can LLM-based Financial Investing Strategies Outperform the Market in Long Run?&#34; KDD 2026. arXiv:2505.07078
+2. Liu &amp; Dang (2025) &#34;FinPos: A Position-Aware Trading Agent System for Real Financial Markets.&#34; arXiv:2510.27251
+3. Chen et al. (2025) &#34;StockBench: Can LLM Agents Trade Stocks Profitably In Real-world Markets?&#34; arXiv:2510.02209
+4. Yu et al. (2023) &#34;FinMem: A Performance-Enhanced LLM Trading Agent with Layered Memory.&#34; arXiv:2311.13743
+5. Xiao et al. (2024) &#34;TradingAgents: Multi-Agents LLM Financial Trading Framework.&#34; arXiv:2412.20138
+6. Darmanin &amp; Vella (2025) &#34;Language Model Guided Reinforcement Learning in Quantitative Trading.&#34; arXiv:2508.02366
+7. Xiong et al. (2025) &#34;QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading.&#34; arXiv:2509.09995
+
+### Datasets
+- Yahoo Finance daily OHLCV data (2004-2025) for AAPL, MSFT, AMZN, TSLA, NFLX
+
+### Tools
+- GPT-4.1-mini (gpt-4.1-mini-2025-04-14) via OpenAI API
+- Python 3.12.8, pandas, numpy, scipy, matplotlib, seaborn
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Plan: Do LLM Trading Agents Perform Better at Longer Decision Horizons?
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Current LLM trading agents (FinMem, FinAgent, TradingAgents) overwhelmingly operate on daily buy/sell/hold decisions, yet multiple papers (FINSABER, StockBench) show they consistently fail to outperform simple buy-and-hold. This represents a fundamental mismatch: LLMs excel at semantic reasoning and synthesizing complex information over time, not at precise numerical day-to-day predictions. If longer horizons unlock better LLM trading performance, it would redirect how the entire field builds financial AI agents.
+
+### Gap in Existing Work
+Per the literature review, **no existing work directly compares LLM agent performance across multiple trading horizons using the same architecture and data** (Gap 1). FinPos (2025) showed multi-timescale rewards improve performance and that 30-day horizons are optimal, but tested only one architecture. FINSABER (KDD 2026) showed daily LLM trading fails over 20 years but didn&#39;t test whether weekly/monthly rebalancing would help.
+
+### Our Novel Contribution
+We conduct the first controlled experiment varying **only the decision frequency** (daily, weekly, monthly) of a real LLM trading agent across multiple stocks and market regimes, while holding the agent architecture, prompts, and data sources constant. This isolates the effect of trading horizon on LLM performance.
+
+### Experiment Justification
+- **Experiment 1 (Baseline strategies)**: Establish non-LLM performance floors (Buy-and-Hold, SMA Crossover) at each frequency to separate horizon effects from LLM-specific effects.
+- **Experiment 2 (LLM agent at varying horizons)**: Core test — same GPT-4.1-mini agent making daily vs. weekly vs. monthly decisions on the same stocks and time periods. Tests our hypothesis directly.
+- **Experiment 3 (Market regime analysis)**: Decompose results by bull/bear/sideways regimes to understand *when* longer horizons help most.
+
+## Research Question
+Does an LLM trading agent achieve better risk-adjusted returns (Sharpe ratio, max drawdown) when making weekly or monthly trading decisions compared to daily decisions?
+
+## Hypothesis Decomposition
+- **H1**: LLM agents at weekly rebalancing frequency will achieve higher Sharpe ratios than at daily frequency.
+- **H2**: LLM agents at monthly rebalancing frequency will achieve higher Sharpe ratios than at daily frequency.
+- **H3**: The advantage of longer horizons will be most pronounced during volatile (bear) markets, where daily noise is highest.
+- **H4**: Longer-horizon LLM strategies will have lower maximum drawdowns than daily strategies.
+
+## Proposed Methodology
+
+### Approach
+We use a single LLM agent architecture with configurable rebalancing frequency. The agent receives recent price data and makes a trading decision (Buy/Sell/Hold) for each stock. We backtest across a 2-year evaluation period (2023-01-01 to 2024-12-31) covering both bull and bear conditions, using 5 stocks (AAPL, MSFT, AMZN, TSLA, NFLX) to avoid survivorship bias concerns.
+
+We use a real LLM (GPT-4.1-mini via OpenAI API) to make actual trading decisions — no simulation of LLM behavior.
+
+### Experimental Steps
+1. Load and validate stock price data from datasets/stock_prices/
+2. Implement backtesting engine with configurable rebalancing frequency
+3. Implement baseline strategies (Buy-and-Hold, SMA Crossover, Random)
+4. Implement LLM agent that calls GPT-4.1-mini with price context
+5. Run baselines at all frequencies for control
+6. Run LLM agent at daily, weekly, and monthly frequencies (3 runs per config for variance)
+7. Compute metrics: Cumulative Return, Sharpe Ratio, Max Drawdown, Sortino Ratio
+8. Statistical comparison across horizons (paired t-tests, effect sizes)
+9. Market regime decomposition (bull/bear/sideways based on 50-day SMA)
+
+### Baselines
+- **Buy-and-Hold**: Purchase on day 1, hold throughout (hardest to beat)
+- **SMA Crossover (20/50)**: Classic momentum strategy
+- **Random**: Random buy/sell/hold each period (lower bound)
+
+### Evaluation Metrics
+- **Cumulative Return (CR%)**: Total return over period
+- **Sharpe Ratio (SR)**: Risk-adjusted return (annualized, rf=0)
+- **Maximum Drawdown (MDD%)**: Worst peak-to-trough decline
+- **Sortino Ratio**: Downside risk-adjusted return
+- **Win Rate**: % of profitable trades
+- **Number of trades**: Cost/activity comparison
+
+### Statistical Analysis Plan
+- Paired comparisons across stocks for each horizon pair (daily vs. weekly, daily vs. monthly)
+- Wilcoxon signed-rank test (non-parametric, small sample)
+- Effect sizes (Cohen&#39;s d)
+- Confidence intervals via bootstrap
+- Significance level: α = 0.05
+
+## Expected Outcomes
+- Weekly/monthly LLM agents should outperform daily on Sharpe ratio (per FinPos findings)
+- Daily LLM agents may show higher turnover and worse drawdowns
+- Buy-and-Hold may still beat all LLM strategies (per FINSABER), but the gap should narrow at longer horizons
+- Bear market periods should show the largest horizon effect
+
+## Timeline and Milestones
+1. Environment setup + data validation: 10 min
+2. Backtesting engine + baselines: 30 min
+3. LLM agent implementation: 30 min
+4. Run experiments: 60 min (API calls)
+5. Analysis + visualization: 30 min
+6. Documentation: 20 min
+
+## Potential Challenges
+- API rate limits: Use GPT-4.1-mini for cost efficiency; implement retry logic
+- Variance in LLM outputs: Run 3 seeds per configuration
+- Small sample size (5 stocks): Use non-parametric tests, report per-stock results
+- Market regime classification: Use simple SMA-based approach to avoid overfitting
+
+## Success Criteria
+- Complete experiments across all 3 horizons × 5 stocks × 3 runs
+- Statistical test results for H1-H4
+- Clear visualization comparing horizons
+- Honest assessment of whether hypothesis is supported
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: Refining LLM Trading — Long-Term vs. Short-Term Decision Horizons
+
+## Research Hypothesis
+Large language model agents may perform better in financial trading when making longer-term trading decisions, as opposed to optimizing for short-term, day-to-day profit.
+
+---
+
+## 1. Research Area Overview
+
+LLM-based financial trading agents have emerged as a rapidly growing research area since 2023. These systems leverage the natural language understanding, reasoning, and in-context learning capabilities of large language models to make investment decisions. The field spans a wide spectrum of approaches: from simple sentiment-driven signals to sophisticated multi-agent architectures that mimic institutional trading firms.
+
+A critical but under-explored question in this domain is **how trading horizon affects LLM agent performance**. Most existing systems operate on daily buy/sell/hold decisions with automatic position liquidation each day (&#34;single-step trading tasks&#34;). However, recent evidence suggests this setup may fundamentally underutilize LLMs&#39; strengths in semantic reasoning and long-term pattern recognition, while exposing their weaknesses in precise numerical optimization and high-frequency reaction.
+
+---
+
+## 2. Key Papers
+
+### 2.1 Core Papers on Trading Horizons (Directly Relevant to Hypothesis)
+
+#### FINSABER: Can LLM-based Financial Investing Strategies Outperform the Market in Long Run?
+- **Authors**: Li, Kim, Cucuringu, Ma (2025) — Accepted at KDD 2026
+- **arXiv**: 2505.07078
+- **Key Contribution**: First comprehensive benchmarking framework for LLM trading strategies with bias mitigation over 20 years of data and 100+ symbols
+- **Methodology**: Rolling-window backtests comparing LLM agents (FinMem, FinAgent) against rule-based, ML, RL, and traditional strategies across S&amp;P 500 constituents (including delisted stocks)
+- **Critical Findings**:
+  - LLM advantages reported in short-period evaluations **vanish under longer, broader testing**
+  - Neither FinMem nor FinAgent generates statistically significant alpha (all p-values &gt; 0.34)
+  - LLMs are **too conservative in bull markets** (Sharpe 0.12 for FinAgent, -0.19 for FinMem) and **too aggressive in bear markets** (Sharpe -0.38 and -0.97)
+  - Model complexity does not equate to market competence — ARIMA consistently outperforms LLM agents on risk-adjusted metrics
+  - Buy-and-Hold significantly outperforms both LLM strategies under bias-mitigated evaluation (p &lt; 0.001)
+- **Relevance**: Directly challenges the premise of LLM trading superiority but also reveals the core problem is **regime-awareness**, not model capability — suggesting that adapting the trading horizon could be the key intervention
+
+#### FinPos: A Position-Aware Trading Agent System for Real Financial Markets
+- **Authors**: Liu, Dang (2025/2026)
+- **arXiv**: 2510.27251
+- **Key Contribution**: First LLM trading agent with explicit position management and multi-timescale reward design
+- **Methodology**: Dual-agent architecture (Direction Decision Agent + Quantity/Risk Decision Agent) with rewards computed across 1-day, 7-day, and 30-day horizons
+- **Critical Findings**:
+  - Position-aware (longer-term) trading dramatically outperforms single-step (daily) trading: **62.15% CR on TSLA vs. negative returns for all baselines** including FinMem (-36.48%), FinAgent (-65.07%)
+  - Multi-timescale reward is the architectural backbone — removing it drops CR below 20% for all stocks
+  - **Performance peaks at 30-day reward horizon** — shorter windows (7-14 days) cause overreaction to noise; longer windows (60+ days) cause signal dilution
+  - LLMs excel at &#34;extracting long-term trends and underlying causal structures from complex semantic information rather than performing high-frequency precise numerical optimization&#34;
+- **Relevance**: **Most directly supports our hypothesis** — demonstrates that designing LLM agents for longer-term decision-making with position continuity unlocks dramatically better performance
+
+#### QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading
+- **Authors**: Xiong, Zhang, Feng, Sun, You (2025)
+- **arXiv**: 2509.09995
+- **Key Contribution**: First multi-agent LLM framework for high-frequency trading using only OHLC data
+- **Methodology**: Four specialized agents (Indicator, Pattern, Trend, Risk) operating on 1-hour and 4-hour bars
+- **Critical Findings**:
+  - Achieves up to 80% directional accuracy at short horizons
+  - Operates solely on price-derived signals, explicitly avoiding textual data which &#34;typically lags price discovery&#34;
+  - Acknowledges that existing LLM frameworks are &#34;ill-suited for the high-speed, precision-critical demands of HFT&#34;
+- **Relevance**: Provides the **short-term counterpoint** — shows LLMs can work at short horizons but require fundamentally different architectures (structured numerical signals rather than text reasoning)
+
+#### Language Model Guided Reinforcement Learning in Quantitative Trading
+- **Authors**: Darmanin, Vella (2025)
+- **arXiv**: 2508.02366
+- **Key Contribution**: Hybrid framework where LLMs generate high-level strategies to guide RL agents
+- **Methodology**: LLMs provide strategic direction while RL handles tactical execution
+- **Finding**: &#34;Algorithmic trading requires short-term tactical decisions consistent with long-term financial objectives&#34; — LLM guidance improves both Sharpe Ratio and Maximum Drawdown
+- **Relevance**: Supports a **division of labor** where LLMs handle longer-term strategy and RL handles short-term execution
+
+### 2.2 Benchmarks and Evaluation Frameworks
+
+#### StockBench: Can LLM Agents Trade Stocks Profitably In Real-world Markets?
+- **Authors**: Chen et al. (2025) — arXiv: 2510.02209
+- **Methodology**: Multi-month sequential trading with daily signals (prices, fundamentals, news)
+- **Finding**: Most LLM agents **struggle to outperform buy-and-hold**; &#34;excelling at static financial knowledge tasks does not necessarily translate into successful trading strategies&#34;
+- **Relevance**: Confirms that daily-frequency LLM trading is difficult; suggests looking at alternative horizons
+
+#### INVESTORBENCH: A Benchmark for Financial Decision-Making Tasks with LLM-based Agent
+- **Authors**: Li et al. (2024) — arXiv: 2412.18174
+- **Key Contribution**: Standardized benchmark across stocks, crypto, and ETFs with 13 LLM backbones
+- **Datasets**: Curated multi-modal datasets for financial decision-making
+- **Relevance**: Provides reusable benchmark infrastructure
+
+#### AI-Trader: Benchmarking Autonomous Agents in Real-Time Financial Markets
+- **Authors**: Fan et al. (2025) — arXiv: 2512.10971
+- **Key Finding**: &#34;General intelligence does not automatically translate to effective trading capability&#34; — tests across US stocks, A-shares, and crypto at multiple trading granularities
+- **Relevance**: Multi-granularity testing enables direct comparison of performance at different frequencies
+
+### 2.3 Multi-Agent Trading Architectures
+
+#### FinMem: A Performance-Enhanced LLM Trading Agent with Layered Memory
+- **Authors**: Yu et al. (2023) — 145 citations
+- **Architecture**: Profile + Memory + Decision modules; layered memory with decay mechanisms
+- **Datasets**: TSLA, NFLX, AMZN, MSFT, DOW30 (6-month evaluation period)
+- **Limitation**: Operates under single-step daily trading; FINSABER showed this advantage vanishes under broader evaluation
+
+#### TradingAgents: Multi-Agents LLM Financial Trading Framework
+- **Authors**: Xiao et al. (2024) — arXiv: 2412.20138, 90 citations
+- **Architecture**: Mimics institutional trading firms with analyst, researcher, trader, and risk management agents
+- **Code**: https://github.com/TauricResearch/TradingAgents
+- **Evaluation**: 3 months, 3 stocks — limited evaluation period
+
+#### FinCon: A Synthesized LLM Multi-Agent System
+- **Authors**: Yu et al. (2024) — arXiv: 2407.06567, 95 citations
+- **Architecture**: Manager-analyst hierarchy with conceptual verbal reinforcement
+- **Key Feature**: Self-critiquing mechanism to update investment beliefs episodically
+- **Evaluation**: 8 months, 8 stocks
+
+#### FLAG-Trader: Fusion LLM-Agent with Gradient-based RL
+- **Authors**: Xiong et al. (2025) — arXiv: 2502.11433
+- **Architecture**: LLM as policy network with parameter-efficient fine-tuning via trading reward gradients
+- **Relevance**: Shows how RL optimization can adapt LLM behavior to financial domain
+
+### 2.4 Surveys
+
+#### Large Language Model Agent in Financial Trading: A Survey
+- **Authors**: Ding et al. (2024) — arXiv: 2408.06361, 51 citations
+- **Taxonomy**: LLM as Trader (news-driven, reflection-driven, debate-driven, RL-driven) vs. LLM as Alpha Miner
+- **Data types**: Numerical (OHLCV), Textual (news, reports), Visual (charts), Simulated
+- **Key insight**: GPT-3.5 used more than GPT-4 due to cost-effectiveness and latency
+
+#### A Survey of LLMs for Financial Applications (Nie et al., 2024)
+- 125 citations, covers linguistic tasks, sentiment analysis, time series, agent-based modeling
+
+---
+
+## 3. Common Methodologies
+
+### Agent Architectures
+- **Single-agent with memory/reflection**: FinMem, FinAgent — layered memory with decay, reflection modules
+- **Multi-agent with role specialization**: TradingAgents, FinCon, QuantAgent HFT — agents in analyst/trader/risk roles
+- **Hybrid LLM+RL**: FLAG-Trader, LM-guided RL — LLM provides strategy, RL handles execution
+- **Position-aware with multi-timescale rewards**: FinPos — dual decision agents with 1/7/30-day reward horizons
+
+### Trading Task Formulations
+- **Single-step daily**: Most common; position auto-liquidated each day; actions = {Buy, Sell, Hold}
+- **Position-aware continuous**: FinPos; position persists across days; agent manages exposure
+- **High-frequency**: QuantAgent; 1h/4h bars; price-only signals
+- **Portfolio-level**: MASS, AlphaAgents; multi-asset allocation decisions
+
+### Common LLM Backbones
+- GPT-4o (most common in 2024-2025 papers)
+- GPT-3.5 (cost-effective, lower latency)
+- Open-source: Qwen, LLaMA, DeepSeek-V3
+
+---
+
+## 4. Standard Baselines
+
+| Baseline | Type | Description |
+|----------|------|-------------|
+| Buy-and-Hold | Passive | Purchase and hold for entire period |
+| SMA Crossover | Rule-based | Moving average crossover signals |
+| Bollinger Bands | Rule-based | Volatility-based bands |
+| MACD / RSI | Rule-based | Momentum indicators |
+| ARIMA | Predictor | Time-series forecasting |
+| XGBoost | ML | Gradient boosting on features |
+| A2C, PPO, SAC, TD3 | RL | Deep reinforcement learning agents |
+| Random | Baseline | Random buy/sell decisions |
+
+---
+
+## 5. Evaluation Metrics
+
+| Metric | Category | Description |
+|--------|----------|-------------|
+| Cumulative Return (CR) | Return | Total return over evaluation period |
+| Annualized Return (AR) | Return | Annualized percentage return |
+| Sharpe Ratio (SPR) | Risk-adjusted | Excess return per unit volatility |
+| Sortino Ratio (STR) | Risk-adjusted | Return per unit downside risk |
+| Maximum Drawdown (MDD) | Risk | Worst peak-to-trough loss |
+| Annualized Volatility (AV) | Risk | Standard deviation of returns |
+| Calmar Ratio | Risk-adjusted | Return per unit max drawdown |
+| Alpha / Beta (CAPM) | Decomposition | Excess return vs. market exposure |
+
+---
+
+## 6. Datasets in the Literature
+
+| Dataset | Used By | Type | Coverage |
+|---------|---------|------|----------|
+| Yahoo Finance OHLCV | FinPos, FinMem, FINSABER | Stock prices | 2000-present |
+| Finnhub News API | FinPos, FinMem | Company/macro news | Real-time |
+| SEC EDGAR (10-K, 10-Q) | FinPos, MarketSenseAI | Financial filings | 1993-present |
+| FNSPID | FinRL-DeepSeek | Financial news time series | KDD &#39;24 dataset |
+| S&amp;P 500 constituents (historical) | FINSABER | Index membership | 2000-2024 |
+| Crypto OHLCV | QuantAgent, AI-Trader | Crypto prices | Various |
+| Nasdaq futures | QuantAgent | Futures data | 1h/4h bars |
+
+---
+
+## 7. Gaps and Opportunities
+
+### Gap 1: No Systematic Comparison of Trading Horizons
+No existing work directly compares LLM agent performance across multiple trading horizons (daily, weekly, monthly) using the same architecture and data. Papers either operate at a single frequency or mention horizon tangentially.
+
+### Gap 2: Position-Aware Trading is Underdeveloped
+FinPos is the first paper to introduce position-aware trading for LLMs. All prior work uses single-step daily tasks that &#34;fundamentally undermine continuous position management.&#34;
+
+### Gap 3: Regime-Awareness is Missing
+FINSABER shows LLMs are &#34;pathologically miscalibrated&#34; across market regimes. No work has studied whether longer holding periods naturally provide better regime alignment.
+
+### Gap 4: Multi-Timescale Reward Design is Promising but Unexplored
+FinPos shows that a 30-day reward horizon optimally balances noise vs. signal dilution. The sensitivity of performance to reward timescale deserves systematic investigation.
+
+### Gap 5: Cost-Performance Tradeoff at Different Horizons
+Longer-term strategies require fewer LLM API calls per unit time, potentially offering better cost-adjusted returns. This has not been studied.
+
+---
+
+## 8. Recommendations for Our Experiment
+
+### Recommended Experimental Design
+1. **Implement a single LLM trading agent** with configurable decision frequency (daily, weekly, monthly rebalancing)
+2. **Test across multiple stocks** (at minimum: TSLA, AAPL, AMZN, NFLX, MSFT) to avoid survivorship bias
+3. **Include both bull and bear market periods** (2020 COVID crash, 2022 bear, 2023-2024 bull)
+4. **Compare against standard baselines**: Buy-and-Hold, ARIMA, moving average crossover
+
+### Recommended Datasets
+- **Primary**: Yahoo Finance daily OHLCV data (already downloaded, 2004-2025)
+- **Supplementary**: Financial news from Finnhub for sentiment signals
+- **For bias mitigation**: Include diverse stocks, not just FAANG winners
+
+### Recommended Metrics
+- Cumulative Return, Sharpe Ratio, Maximum Drawdown (standard trio)
+- Annualized Return and Sortino Ratio (additional risk-adjusted)
+- Trading frequency / turnover (to measure cost implications)
+- Win rate at each time horizon
+
+### Recommended Baselines
+- Buy-and-Hold (passive benchmark)
+- SMA Crossover (simple active strategy)
+- ARIMA predictor (ML baseline)
+- Same LLM agent at different frequencies (the key experimental variable)
+
+### Methodological Considerations
+- Use **rolling-window evaluation** to avoid data-snooping bias (per FINSABER methodology)
+- Include **transaction costs** in all returns (per FINSABER: $0.0049/share)
+- Evaluate across **market regimes** (bull/bear/sideways) separately
+- Use at least **1 year** of test data to capture multiple market conditions
+- Consider **position-aware vs. single-step** task formulation (per FinPos)
+- Set LLM temperature to 0.7 (per FinPos) or test sensitivity
+- Use **GPT-4o-mini** for cost efficiency in large-scale experiments
+
+### Key Variables to Manipulate
+1. **Trading frequency**: Daily, weekly (5-day), bi-weekly (10-day), monthly (21-day) rebalancing
+2. **Information horizon**: How much historical context the LLM receives (1 week, 1 month, 3 months)
+3. **Decision complexity**: Simple direction (buy/sell/hold) vs. position-sizing
+4. **Data modality**: Price-only vs. price + news vs. price + news + filings
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+3. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+4. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+5. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+6. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+7. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+8. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+9. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Create paper_draft/commands/ directory with:
+   - math.tex: Math notation macros (copy from templates/paper_writing/commands/)
+   - general.tex: Formatting macros (copy from templates/paper_writing/commands/)
+   - macros.tex: Project-specific term definitions
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read templates/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

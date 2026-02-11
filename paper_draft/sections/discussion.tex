@@ -1,0 +1,68 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why Weekly Works Best}
+\label{sec:why_weekly}
+
+Our results reveal a non-monotonic relationship between decision frequency and LLM trading performance.
+We offer three complementary explanations for why weekly rebalancing sits at the optimum.
+
+\para{Noise filtering.}
+Daily price movements contain substantial noise from intraday trading, market microstructure, and short-term sentiment fluctuations.
+The LLM agent at daily frequency reacts to this noise, leading to excessive trading (127 trades on average) and frequent whipsawing between positions.
+Weekly aggregation smooths out daily fluctuations, allowing the agent to focus on genuine 5-day trends.
+This aligns with the finding from \finpos that daily rewards cause ``overreaction to noise'' \citep{liu2025finpos}.
+
+\para{Signal preservation.}
+At monthly frequency, the agent makes only 24 decisions over two years---too few to respond to regime changes, earnings surprises, or multi-week rallies.
+TSLA and NFLX both lost money at monthly frequency because the agent missed significant price movements between decision points.
+The weekly cadence provides enough decision points (100 over 2 years) to capture major trends without drowning in daily noise.
+
+\para{Alignment with LLM reasoning.}
+LLMs process information through token-level pattern matching and semantic reasoning, not through precise numerical optimization.
+A one-week horizon maps naturally to the kind of qualitative reasoning LLMs perform well: ``the stock has risen 5\% this week on strong earnings; the trend is likely to continue'' is a judgment LLMs can make more reliably than ``the stock dropped 0.3\% today; it will likely rebound tomorrow.''
+This interpretation is consistent with \citet{darmanin2025lmrl}, who argue that LLMs are best suited for longer-term strategic direction rather than short-term tactical execution.
+
+\subsection{Relationship to Prior Work}
+\label{sec:prior_work_discussion}
+
+Our findings are consistent with, and extend, several recent results.
+\finsaber \citep{li2025finsaber} found that LLM agents are ``too conservative in bull markets and too aggressive in bear markets'' at the daily frequency.
+We observe the same conservatism: the daily LLM agent achieves only +53.8\% return during a period where \buyhold returns +162.2\%.
+Weekly rebalancing partially addresses this, boosting returns to +62.4\%, but the gap remains large.
+
+\finpos \citep{liu2025finpos} demonstrated that 30-day reward horizons outperform shorter windows for their dual-agent architecture.
+Our finding that the optimal \emph{decision} frequency is weekly (5 days) rather than monthly (21 days) suggests that the optimal horizon may differ depending on whether it governs the reward computation or the decision timing.
+When the agent can still make daily micro-adjustments (as in \finpos), longer reward horizons help.
+When the agent can only act at the specified frequency (as in our setup), weekly provides a better balance.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+We identify several limitations that qualify our findings.
+
+\para{Bull market bias.}
+Our 2023--2024 test period was predominantly bullish, with all five stocks showing strong positive returns.
+The weekly advantage may behave differently in bear or sideways markets.
+Extending the analysis to include 2020 (COVID crash and recovery) and 2022 (bear market) is an important next step.
+
+\para{Small stock universe.}
+With only $n = 5$ stocks, our paired statistical tests lack power: the medium effect sizes ($d = 0.59$ for weekly vs.\ daily, $d = -0.66$ for monthly vs.\ daily) would likely reach significance with $n = 15$--20 stocks.
+All five stocks are large-cap technology companies, and the results may not generalize to small-caps, value stocks, or other sectors.
+
+\para{Single model.}
+We test only \gptmini.
+Different LLM architectures (GPT-4.1, Claude, Gemini) may exhibit different horizon sensitivities.
+Models with stronger numerical reasoning might perform better at daily frequency, while models with stronger narrative reasoning might benefit even more from weekly.
+
+\para{Price-only signals.}
+The agent receives only price data and simple technical indicators.
+Adding news sentiment, earnings data, or SEC filings could change the optimal horizon---news events are inherently discrete and may favor decision points aligned with information release schedules.
+
+\para{No position sizing or short selling.}
+The binary long/cash position limits the agent's expressiveness.
+Partial positions, portfolio-level allocation, and short selling would provide a more realistic trading environment and could interact with the frequency variable.
+
+\para{Near-deterministic monthly results.}
+With only 24 decision points and temperature 0.3, the monthly LLM agent produces nearly identical decisions across seeds.
+This means monthly ``variance'' is effectively zero, and poor monthly performance reflects the agent's systematic behavior rather than stochastic noise.

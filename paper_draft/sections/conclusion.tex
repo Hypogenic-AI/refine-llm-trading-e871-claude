@@ -1,0 +1,15 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented the first controlled experiment isolating decision frequency as the independent variable for LLM trading agents.
+Testing \gptmini across daily, weekly, and monthly rebalancing on five major U.S.\ stocks over 2023--2024, we identified a non-monotonic ``Goldilocks zone'': weekly rebalancing achieves a 15\% higher Sharpe ratio than daily (1.028 vs.\ 0.892) while requiring 75\% fewer trades, whereas monthly rebalancing degrades performance by 53\% (Sharpe 0.421).
+
+Our results carry a practical message for the LLM trading community: \emph{default to weekly, not daily, rebalancing.}
+This simple change improves risk-adjusted returns, reduces API costs by approximately 80\%, and works robustly across 4 of 5 tested stocks.
+Theoretically, the finding suggests that LLMs have a temporal sweet spot for financial reasoning---daily is too noisy, monthly too coarse---that aligns with their strength in semantic pattern recognition over multi-day horizons.
+
+Important caveats remain.
+No LLM configuration outperforms \buyhold in this bull market, consistent with \finsaber \citep{li2025finsaber}.
+The test period, stock universe, and model are all limited.
+Future work should extend to bear markets, larger stock universes, multiple LLM backbones, and hybrid architectures that combine weekly LLM strategic decisions with daily rule-based execution.
+The question of whether the weekly optimum reflects a fundamental property of LLM reasoning or an artifact of the 5-day trading week structure remains open and warrants further investigation.

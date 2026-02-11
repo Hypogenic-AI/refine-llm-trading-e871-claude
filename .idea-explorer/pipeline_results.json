@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "stages": {
+    "resource_finder": {
+      "success": true,
+      "completion_marker": "/workspaces/refine-llm-trading-e871-claude/.resource_finder_complete",
+      "outputs": {
+        "literature_review": "/workspaces/refine-llm-trading-e871-claude/literature_review.md",
+        "resources_catalog": "/workspaces/refine-llm-trading-e871-claude/resources.md",
+        "papers_dir": "/workspaces/refine-llm-trading-e871-claude/papers",
+        "datasets_dir": "/workspaces/refine-llm-trading-e871-claude/datasets",
+        "code_dir": "/workspaces/refine-llm-trading-e871-claude/code"
+      },
+      "log_file": "/workspaces/refine-llm-trading-e871-claude/logs/resource_finder_claude.log",
+      "transcript_file": "/workspaces/refine-llm-trading-e871-claude/logs/resource_finder_claude_transcript.jsonl",
+      "elapsed_time": 1085.8883967399597
+    },
+    "experiment_runner": {
+      "success": true,
+      "return_code": 0,
+      "elapsed_time": 3148.163288831711,
+      "log_file": "/workspaces/refine-llm-trading-e871-claude/logs/execution_claude.log",
+      "transcript_file": "/workspaces/refine-llm-trading-e871-claude/logs/execution_claude_transcript.jsonl"
+    }
+  },
+  "work_dir": "/workspaces/refine-llm-trading-e871-claude"
+}

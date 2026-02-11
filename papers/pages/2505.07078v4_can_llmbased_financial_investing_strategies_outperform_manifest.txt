@@ -1,0 +1,10 @@
+PDF: papers/2505.07078v4_can_llmbased_financial_investing_strategies_outperform.pdf
+Total pages: 15
+Pages per chunk: 3
+
+Chunks:
+  2505.07078v4_can_llmbased_financial_investing_strategies_outperform_chunk_001.pdf: pages 1-3
+  2505.07078v4_can_llmbased_financial_investing_strategies_outperform_chunk_002.pdf: pages 4-6
+  2505.07078v4_can_llmbased_financial_investing_strategies_outperform_chunk_003.pdf: pages 7-9
+  2505.07078v4_can_llmbased_financial_investing_strategies_outperform_chunk_004.pdf: pages 10-12
+  2505.07078v4_can_llmbased_financial_investing_strategies_outperform_chunk_005.pdf: pages 13-15

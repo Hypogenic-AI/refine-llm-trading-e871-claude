@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "AMZN",
+    "TSLA",
+    "NFLX"
+  ],
+  "frequencies": [
+    "daily",
+    "weekly",
+    "monthly"
+  ],
+  "test_start": "2023-01-01",
+  "test_end": "2024-12-31",
+  "llm_model": "gpt-4.1-mini",
+  "llm_temperature": 0.3,
+  "runs_per_freq": {
+    "daily": 2,
+    "weekly": 3,
+    "monthly": 3
+  },
+  "transaction_cost_pct": 0.001,
+  "timestamp": "2026-02-11T06:28:15.377281",
+  "total_elapsed_seconds": 2608.424345254898
+}

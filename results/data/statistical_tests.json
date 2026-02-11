@@ -1,0 +1,80 @@
+{
+  "sharpe_ratio": {
+    "daily_vs_weekly": {
+      "mean_diff": 0.1355,
+      "wilcoxon_p": 0.1875,
+      "ttest_p": 0.2557300363213056,
+      "cohens_d": 0.5926507775977455,
+      "f1_mean": 0.8922599999999999,
+      "f2_mean": 1.02776
+    },
+    "daily_vs_monthly": {
+      "mean_diff": -0.4716266666666666,
+      "wilcoxon_p": 0.3125,
+      "ttest_p": 0.21329090079003932,
+      "cohens_d": -0.6613145558213489,
+      "f1_mean": 0.8922599999999999,
+      "f2_mean": 0.4206333333333333
+    },
+    "weekly_vs_monthly": {
+      "mean_diff": -0.6071266666666666,
+      "wilcoxon_p": 0.125,
+      "ttest_p": 0.06212957724545106,
+      "cohens_d": -1.1483112832455322,
+      "f1_mean": 1.02776,
+      "f2_mean": 0.4206333333333333
+    }
+  },
+  "cumulative_return_pct": {
+    "daily_vs_weekly": {
+      "mean_diff": 8.592000000000002,
+      "wilcoxon_p": 0.1875,
+      "ttest_p": 0.15311261888534472,
+      "cohens_d": 0.7873565970934204,
+      "f1_mean": 53.81,
+      "f2_mean": 62.402
+    },
+    "daily_vs_monthly": {
+      "mean_diff": -40.325333333333326,
+      "wilcoxon_p": 0.3125,
+      "ttest_p": 0.23277281510196612,
+      "cohens_d": -0.6282507403056034,
+      "f1_mean": 53.81,
+      "f2_mean": 13.48466666666667
+    },
+    "weekly_vs_monthly": {
+      "mean_diff": -48.91733333333333,
+      "wilcoxon_p": 0.125,
+      "ttest_p": 0.12179761559872386,
+      "cohens_d": -0.875759883399638,
+      "f1_mean": 62.402,
+      "f2_mean": 13.48466666666667
+    }
+  },
+  "max_drawdown_pct": {
+    "daily_vs_weekly": {
+      "mean_diff": -3.524333333333331,
+      "wilcoxon_p": 0.4375,
+      "ttest_p": 0.35991928806279216,
+      "cohens_d": -0.4620218932553928,
+      "f1_mean": -20.663,
+      "f2_mean": -24.18733333333333
+    },
+    "daily_vs_monthly": {
+      "mean_diff": -7.2976666666666645,
+      "wilcoxon_p": 0.125,
+      "ttest_p": 0.10533766391016079,
+      "cohens_d": -0.9327679875883629,
+      "f1_mean": -20.663,
+      "f2_mean": -27.96066666666667
+    },
+    "weekly_vs_monthly": {
+      "mean_diff": -3.7733333333333334,
+      "wilcoxon_p": 0.1875,
+      "ttest_p": 0.2417850966055303,
+      "cohens_d": -0.6138792977867711,
+      "f1_mean": -24.18733333333333,
+      "f2_mean": -27.96066666666667
+    }
+  }
+}

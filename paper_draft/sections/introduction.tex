@@ -1,0 +1,36 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Can large language models trade stocks profitably?
+Recent years have seen a surge of LLM-based trading agents---\finmem \citep{yu2023finmem}, \tradingagents \citep{xiao2024tradingagents}, \fincon \citep{yu2024fincon}---that use the reasoning and in-context learning capabilities of models like GPT-4 \citep{achiam2023gpt4} to make financial decisions.
+Nearly all of these systems operate on a \emph{daily} cycle: each trading day, the agent observes prices and news, outputs a buy/sell/hold decision, and evaluates the position at close.
+Yet comprehensive benchmarks paint a sobering picture.
+\finsaber \citep{li2025finsaber}, testing over 20 years and 100+ stocks, finds that neither \finmem nor \finagent generates statistically significant alpha---and that simple Buy-and-Hold significantly outperforms both (all $p$-values $> 0.34$ for LLM alpha).
+\stockbench \citep{chen2025stockbench} reaches a similar conclusion: excelling at static financial knowledge does not translate into successful daily trading.
+
+We hypothesize that the daily decision frequency itself may be a fundamental bottleneck.
+LLMs excel at synthesizing complex information and identifying semantic patterns, not at reacting to precise numerical fluctuations within a single trading day.
+\citet{liu2025finpos} provide initial evidence for this view: their \finpos system, which evaluates performance over 1-day, 7-day, and 30-day horizons, finds that multi-timescale rewards dramatically improve performance, with the 30-day horizon performing best.
+However, no prior work has directly isolated decision frequency as the independent variable using a single agent architecture across multiple horizons.
+
+\para{Our contribution.}
+We conduct the first controlled experiment comparing LLM trading agent performance across three decision frequencies---daily, weekly (5-day), and monthly (21-day)---while holding the agent architecture, prompt template, LLM backbone (\gptmini), and data constant.
+We test on five major U.S.\ stocks (AAPL, MSFT, AMZN, TSLA, NFLX) over a two-year period (2023--2024) comprising 502 trading days.
+
+Our central finding is a \emph{non-monotonic} relationship between decision horizon and performance---a ``Goldilocks zone.''
+Weekly rebalancing achieves the highest Sharpe ratio (1.028 vs.\ 0.892 for daily), delivers 16\% higher cumulative returns (+62.4\% vs.\ +53.8\%), and requires 75\% fewer trades (31 vs.\ 127).
+Monthly rebalancing, however, degrades performance dramatically (Sharpe 0.421), with two stocks producing negative returns.
+This non-monotonicity suggests that LLMs have a specific temporal resolution---around one week---where their reasoning is most effective for financial decision-making.
+
+In summary, we make the following contributions:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+\item We design the first controlled experiment isolating decision frequency as the sole independent variable for LLM trading agents, comparing daily, weekly, and monthly rebalancing with identical agent architecture and data.
+\item We identify a non-monotonic ``Goldilocks zone'': weekly rebalancing outperforms daily by 15\% in Sharpe ratio while using 75\% fewer API calls, whereas monthly rebalancing degrades performance by 53\%.
+\item We provide per-stock analysis showing that the weekly advantage is robust across 4 of 5 stocks and is most pronounced for lower-volatility equities, offering actionable guidance for LLM agent design.
+\end{itemize}
+
+The remainder of this paper is organized as follows.
+\secref{sec:related} reviews related work on LLM trading agents and temporal decision-making.
+\secref{sec:method} describes our experimental methodology.
+\secref{sec:results} presents our main results and analysis.
+\secref{sec:discussion} discusses implications and limitations, and \secref{sec:conclusion} concludes.
